@@ -185,7 +185,7 @@ class TicTacToeGame:
                     continue
 
                 encrypted_move = opponent_rsa.encrypt(str(gridPlace))
-                sock.sendall(json.dumps(Message("MOVE", data=encrypted_move)))
+                sock.sendall(json.dumps(Message("MOVE", data=encrypted_move).__dict__).encode())
             else:
                 server_raw_data = sock.recv(4096)
                 message = json.loads(server_raw_data.decode())
@@ -197,13 +197,13 @@ class TicTacToeGame:
             if self.verify_victory(current_player):
                 self.print_table()
                 print(f"Jogador {current_player} venceu!")
-                sock.sendall(json.dumps(Message("END", result=current_player)))
+                sock.sendall(json.dumps(Message("END", result=current_player).__dict__).encode())
                 break
 
             if self.verify_draw():
                 self.print_table()
                 print("Empate de jogo")
-                sock.sendall(json.dumps(Message("END", result="DRAW")))
+                sock.sendall(json.dumps(Message("END", result="DRAW").__dict__).encode())
                 break
 
             current_player = 'O' if current_player == 'X' else 'X'
@@ -225,7 +225,7 @@ def run_socket_client(host, port):
     sock.connect((host, port))
 
     # envia informação da chave publica para o server conectado
-    sock.sendall(json.dumps(Message("KEY_EXCH", e=cl_pub_key[1], n=cl_pub_key[0])).encode())
+    sock.sendall(json.dumps(Message("KEY_EXCH", e=cl_pub_key[1], n=cl_pub_key[0]).__dict__).encode())
 
     # aguarda resposta do server conectado para receber a chave pública
     server_raw_response = sock.recv(1024)
@@ -236,7 +236,7 @@ def run_socket_client(host, port):
     server_rsa = RsaCryptography(server_pub_key[0], server_pub_key[1])
 
     # confirma recebimento da chave
-    sock.sendall(json.dumps(Message("KEY_ACK")).encode())
+    sock.sendall(json.dumps(Message("KEY_ACK").__dict__).encode())
 
     game = TicTacToeGame()
     player_symbol, opponent_symbol = 'O', 'X'
@@ -258,6 +258,8 @@ def run_socket_server(host, port):
     sock.bind((host, port))
     sock.listen(1)
 
+    print("Servidor iniciado")
+
     conn, addr = sock.accept()
 
     # aguarda resposta do server conectado para receber a chave pública
@@ -266,7 +268,7 @@ def run_socket_server(host, port):
     client_pub_key = [client_data["n"], client_data["e"]]
 
     # envia informação da chave publica para o server conectado
-    conn.sendall(json.dumps(Message("KEY_EXCH", e=sv_pub_key[1], n=sv_pub_key[0])).encode())
+    conn.sendall(json.dumps(Message("KEY_EXCH", e=sv_pub_key[1], n=sv_pub_key[0]).__dict__).encode())
 
     # cria instancia colocando a chave pública do servidor para poder criptografar dados
     client_rsa = RsaCryptography(client_pub_key[0], client_pub_key[1])
