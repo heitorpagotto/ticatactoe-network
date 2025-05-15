@@ -127,17 +127,17 @@ class TicTacToeGame:
             if all(self.table[row][column] == player for row in range(3)):
                 return True
 
-        leftScoreCount = 0
+        left_score_count = 0
         for diagonal in range(3):
             if self.table[diagonal][diagonal] == player:
-                leftScoreCount += 1
+                left_score_count += 1
 
-        rightScoreCount = 0
+        right_score_count = 0
         for diagonal in range(3):
             if self.table[diagonal][2 - diagonal] == player:
-                rightScoreCount += 1
+                right_score_count += 1
 
-        if leftScoreCount == 3 or rightScoreCount == 3:
+        if left_score_count == 3 or right_score_count == 3:
             return True
 
         return False
@@ -154,7 +154,6 @@ class TicTacToeGame:
         column = 0 if grid_place == 0 else grid_place % 3
 
         if self.table[line][column] != ' ':
-            print("Posicao ja ocupada. Escolha outra posição.")
             return False
 
         self.table[line][column] = player
@@ -166,30 +165,31 @@ class TicTacToeGame:
              opponent_symbol: str,
              player_rsa: RsaCryptography,
              opponent_rsa: RsaCryptography):
-        playingGame = True
+        playing_game = True
         current_player = 'X'
 
-        while playingGame:
+        while playing_game:
             self.print_table()
             print(f"Vez do jogador: {current_player}")
 
-            inputMessage = "Jogador " + current_player + " digite um número de 0 a 8:"
+            input_message = "Jogador " + current_player + " digite um número de 0 a 8:"
 
             if current_player == player_symbol:
                 sleep(1)
-                gridPlace = -1
+                grid_place = -1
 
-                while gridPlace < 0 or gridPlace > 8:
+                while grid_place < 0 or grid_place > 8:
                     try:
-                        gridPlace = int(input(inputMessage))
+                        grid_place = int(input(input_message))
                     except ValueError:
                         print("Entrada invalida. Digite um numero de 0 a 8.")
                         continue
 
-                if not self.make_move(gridPlace, player_symbol):
+                if not self.make_move(grid_place, player_symbol):
+                    input_message = "Posicao já ocupada. Digite um numero de 0 a 8."
                     continue
 
-                encrypted_move = opponent_rsa.encrypt(str(gridPlace))
+                encrypted_move = opponent_rsa.encrypt(str(grid_place))
                 sock.sendall(json.dumps(Message("MOVE", data=encrypted_move).__dict__).encode())
             else:
                 server_raw_data = sock.recv(4096)
@@ -283,7 +283,6 @@ def run_socket_server(host, port):
     # aguarda resposta do server conectado para receber a chave pública
     client_raw_response = conn.recv(1024)
     client_data = json.loads(client_raw_response.decode())
-    print(client_data)
     if client_data["type"] == "KEY_EXCH":
         client_pub_key = [client_data["n"], client_data["e"]]
 
