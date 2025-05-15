@@ -1,6 +1,7 @@
 import json
 import random
 import socket
+from time import sleep
 
 
 class RsaCryptography:
@@ -14,7 +15,7 @@ class RsaCryptography:
             self._privateKey = []
 
         if n is not None and e is not None:
-            self._publicKey = [n, d]
+            self._publicKey = [n, e]
         else:
             self._publicKey = []
 
@@ -95,11 +96,12 @@ class RsaCryptography:
 
 
 class TicTacToeGame:
-    table = [
-        [' ', ' ', ' '],
-        [' ', ' ', ' '],
-        [' ', ' ', ' ']
-    ]
+    def __init__(self):
+        self.table = [
+            [' ', ' ', ' '],
+            [' ', ' ', ' '],
+            [' ', ' ', ' ']
+        ]
 
     def print_table(self):
         print('\n')
@@ -171,12 +173,15 @@ class TicTacToeGame:
             self.print_table()
             print(f"Vez do jogador: {current_player}")
 
+            inputMessage = "Jogador " + current_player + " digite um número de 0 a 8:"
+
             if current_player == player_symbol:
+                sleep(1)
                 gridPlace = -1
 
                 while gridPlace < 0 or gridPlace > 8:
                     try:
-                        gridPlace = int(input("Digite um número de 0 a 8: "))
+                        gridPlace = int(input(inputMessage))
                     except ValueError:
                         print("Entrada invalida. Digite um numero de 0 a 8.")
                         continue
@@ -211,11 +216,13 @@ class TicTacToeGame:
 
 class Message:
     def __init__(self, type, **options):
-        type = type
-        options = options
+        self.type = type
+        for key, value in options.items():
+            setattr(self, key, value)
 
 
 def run_socket_client(host, port):
+    sleep(1)
     # Cria instancia da classe gerando uma chave privada e publica unica
     cl_rsa = RsaCryptography()
     cl_pub_key = cl_rsa.get_public_key()
@@ -224,24 +231,34 @@ def run_socket_client(host, port):
     sock = socket.socket()
     sock.connect((host, port))
 
+    print(f"Player 2 conectado > {host}:{port}")
+
     # envia informação da chave publica para o server conectado
     sock.sendall(json.dumps(Message("KEY_EXCH", e=cl_pub_key[1], n=cl_pub_key[0]).__dict__).encode())
 
     # aguarda resposta do server conectado para receber a chave pública
     server_raw_response = sock.recv(1024)
     server_data = json.loads(server_raw_response.decode())
-    server_pub_key = [server_data["n"], server_data["e"]]
+    if server_data['type'] == "KEY_EXCH":
+        server_pub_key = [server_data["n"], server_data["e"]]
 
-    # cria instancia colocando a chave pública do servidor para poder criptografar dados
-    server_rsa = RsaCryptography(server_pub_key[0], server_pub_key[1])
+        # cria instancia colocando a chave pública do servidor para poder criptografar dados
+        server_rsa = RsaCryptography(server_pub_key[0], server_pub_key[1])
 
-    # confirma recebimento da chave
-    sock.sendall(json.dumps(Message("KEY_ACK").__dict__).encode())
+        # confirma recebimento da chave
+        sock.sendall(json.dumps(Message("KEY_ACK").__dict__).encode())
 
-    game = TicTacToeGame()
-    player_symbol, opponent_symbol = 'O', 'X'
+        print("Player 2 conexão completa")
 
-    game.play(sock, player_symbol, opponent_symbol, cl_rsa, server_rsa)
+        start_game_raw = sock.recv(1024)
+        start_game = json.loads(start_game_raw)
+        if start_game["type"] == "START":
+            game = TicTacToeGame()
+            player_symbol, opponent_symbol = 'O', 'X'
+
+            print("Você é o jogador", player_symbol)
+
+            game.play(sock, player_symbol, opponent_symbol, cl_rsa, server_rsa)
 
     # Fecha conexão socket
     sock.close()
@@ -257,43 +274,39 @@ def run_socket_server(host, port):
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind((host, port))
     sock.listen(1)
-
-    print("Servidor iniciado")
+    print(f"Player 1 ouvindo > {host}:{port}")
 
     conn, addr = sock.accept()
 
+    print(f"Player 1 conectado > {addr}")
+
     # aguarda resposta do server conectado para receber a chave pública
-    client_raw_response = sock.recv(1024)
+    client_raw_response = conn.recv(1024)
     client_data = json.loads(client_raw_response.decode())
-    client_pub_key = [client_data["n"], client_data["e"]]
+    print(client_data)
+    if client_data["type"] == "KEY_EXCH":
+        client_pub_key = [client_data["n"], client_data["e"]]
 
-    # envia informação da chave publica para o server conectado
-    conn.sendall(json.dumps(Message("KEY_EXCH", e=sv_pub_key[1], n=sv_pub_key[0]).__dict__).encode())
+        # envia informação da chave publica para o server conectado
+        conn.sendall(json.dumps(Message("KEY_EXCH", e=sv_pub_key[1], n=sv_pub_key[0]).__dict__).encode())
 
-    # cria instancia colocando a chave pública do servidor para poder criptografar dados
-    client_rsa = RsaCryptography(client_pub_key[0], client_pub_key[1])
+        # cria instancia colocando a chave pública do servidor para poder criptografar dados
+        client_rsa = RsaCryptography(client_pub_key[0], client_pub_key[1])
 
-    # confirma se cliente recebeu chave
-    conn.recv(1024)
+        # confirma se cliente recebeu chave
+        client_key_received_raw = conn.recv(1024)
+        client_key_received = json.loads(client_key_received_raw)
 
-    game = TicTacToeGame()
-    player_symbol, opponent_symbol = 'X', 'O'
+        if client_key_received['type'] == "KEY_ACK":
+            game = TicTacToeGame()
+            player_symbol, opponent_symbol = 'X', 'O'
 
-    game.play(conn, player_symbol, opponent_symbol, sv_rsa, client_rsa)
+            print("Você é o jogador", player_symbol)
+
+            conn.sendall(json.dumps(Message("START").__dict__).encode())
+
+            game.play(conn, player_symbol, opponent_symbol, sv_rsa, client_rsa)
 
     # Fecha conexão socket
     conn.close()
     sock.close()
-
-
-# if __name__ == '__main__':
-#
-#
-#     a = rsa.encrypt('test123')
-#     b = rsa.decrypt(a)
-#
-#     print(a, b)
-#
-#     game = TicTacToeGame()
-#
-#     game.play()
