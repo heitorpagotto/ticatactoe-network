@@ -182,6 +182,7 @@ class TicTacToeGame:
                     try:
                         grid_place = int(input(input_message))
                     except ValueError:
+                        input_message = 'Entrada inválida. Digite um numero de 0 a 8.'
                         print("Entrada invalida. Digite um numero de 0 a 8.")
                         continue
 
@@ -202,12 +203,14 @@ class TicTacToeGame:
             if self.verify_victory(current_player):
                 self.print_table()
                 print(f"Jogador {current_player} venceu!")
+                sleep(1)
                 sock.sendall(json.dumps(Message("END", result=current_player).__dict__).encode())
                 break
 
             if self.verify_draw():
                 self.print_table()
                 print("Empate de jogo")
+                sleep(1)
                 sock.sendall(json.dumps(Message("END", result="DRAW").__dict__).encode())
                 break
 
