@@ -103,7 +103,7 @@ class TicTacToeGame:
             [' ', ' ', ' ']
         ]
 
-    def print_table(self):
+    def _print_table(self):
         print('\n')
         for rowIdx, row in enumerate(self.table):
             line = ''
@@ -118,7 +118,7 @@ class TicTacToeGame:
                 print(f"----+---+----")
         print('\n')
 
-    def verify_victory(self, player):
+    def _verify_victory(self, player):
         for row in self.table:
             if all(place == player for place in row):
                 return True
@@ -142,14 +142,14 @@ class TicTacToeGame:
 
         return False
 
-    def verify_draw(self):
+    def _verify_draw(self):
         for row in self.table:
             if ' ' in row:
                 return False
 
         return True
 
-    def make_move(self, grid_place, player):
+    def _make_move(self, grid_place, player):
         line = 0 if grid_place == 0 else grid_place // 3
         column = 0 if grid_place == 0 else grid_place % 3
 
@@ -169,7 +169,7 @@ class TicTacToeGame:
         current_player = 'X'
 
         while playing_game:
-            self.print_table()
+            self._print_table()
             print(f"Vez do jogador: {current_player}")
 
             input_message = "Jogador " + current_player + " digite um número de 0 a 8:"
@@ -186,7 +186,7 @@ class TicTacToeGame:
                         print("Entrada invalida. Digite um numero de 0 a 8.")
                         continue
 
-                if not self.make_move(grid_place, player_symbol):
+                if not self._make_move(grid_place, player_symbol):
                     input_message = "Posicao já ocupada. Digite um numero de 0 a 8."
                     continue
 
@@ -198,17 +198,17 @@ class TicTacToeGame:
                 if message['type'] == "MOVE":
                     encrypted = message['data']
                     position = int(player_rsa.decrypt(encrypted))
-                    self.make_move(position, opponent_symbol)
+                    self._make_move(position, opponent_symbol)
 
-            if self.verify_victory(current_player):
-                self.print_table()
+            if self._verify_victory(current_player):
+                self._print_table()
                 print(f"Jogador {current_player} venceu!")
                 sleep(1)
                 sock.sendall(json.dumps(Message("END", result=current_player).__dict__).encode())
                 break
 
-            if self.verify_draw():
-                self.print_table()
+            if self._verify_draw():
+                self._print_table()
                 print("Empate de jogo")
                 sleep(1)
                 sock.sendall(json.dumps(Message("END", result="DRAW").__dict__).encode())
